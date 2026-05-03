@@ -1,0 +1,17 @@
+{
+  "name": "loldata",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/astral-sh/uv:latest": {}
+  },
+  "postCreateCommand": "uv init --no-workspace --vcs none data_pipeline/extract && uv init --no-workspace --vcs none data_pipeline/load && uv init --no-workspace --vcs none data_pipeline/transform",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff"
+      ]
+    }
+  }
+}
