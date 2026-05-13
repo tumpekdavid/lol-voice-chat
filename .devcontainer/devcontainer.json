@@ -1,10 +1,11 @@
 {
-  "name": "loldata",
+  "name": "lol-voice-chat",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
-  "features": {
-    "ghcr.io/astral-sh/uv:latest": {}
-  },
-  "postCreateCommand": "uv init --no-workspace --vcs none data_pipeline/extract && uv init --no-workspace --vcs none data_pipeline/load && uv init --no-workspace --vcs none data_pipeline/transform",
+  // libopus0 is required at runtime by discord-ext-voice-recv (Opus codec).
+  // uv is installed via `pip install --user` — there is no official `ghcr.io/astral-sh/uv` devcontainer feature
+  //   (that registry path is uv's Docker image, not a feature manifest).
+  // uv sync runs only if pyproject.toml exists; first-time bootstrap is `uv init` + `uv add` (see README.md).
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends libopus0 && pip install --user uv && (test -f pyproject.toml && uv sync || true)",
   "customizations": {
     "vscode": {
       "extensions": [
