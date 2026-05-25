@@ -90,4 +90,5 @@ See [docs/operations.md](docs/operations.md) for the full command list.
 - `mcr.microsoft.com/devcontainers/python:3.12` base.
 - [uv](https://docs.astral.sh/uv/) installed via `pip install --user uv` (no `ghcr.io/astral-sh/uv` devcontainer feature exists — the registry path is the uv Docker image, not a feature manifest).
 - `libopus0` — required at runtime by `discord-ext-voice-recv` (Opus audio codec). Without it, the bot will fail to decode received voice frames.
+- [Claude Code](https://code.claude.com/docs/en/vs-code) VS Code extension. The extension bundles its own `claude` CLI binary, so no separate Node / npm install is needed. Sign in via the extension panel on first use.
 - Runs `uv sync` on container create **if** `pyproject.toml` already exists.

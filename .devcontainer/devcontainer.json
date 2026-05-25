@@ -5,10 +5,11 @@
   // uv is installed via `pip install --user` — there is no official `ghcr.io/astral-sh/uv` devcontainer feature
   //   (that registry path is uv's Docker image, not a feature manifest).
   // uv sync runs only if pyproject.toml exists; first-time bootstrap is `uv init` + `uv add` (see README.md).
+  // The `anthropic.claude-code` extension bundles its own `claude` CLI binary, so no Node / npm install is needed.
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends libopus0 && pip install --user uv && (test -f pyproject.toml && uv sync || true)",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-python.python", "ms-python.vscode-pylance", "charliermarsh.ruff"]
+      "extensions": ["ms-python.python", "ms-python.vscode-pylance", "charliermarsh.ruff", "anthropic.claude-code"]
     }
   }
 }
