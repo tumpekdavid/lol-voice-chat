@@ -1,26 +1,23 @@
 # lol-voice-chat
 
-Discord bot that joins a voice channel, listens for PTT audio, and answers spoken LoL champion-ability questions via OpenAI Realtime API. Goal: sub-second turn latency. One process, ~$5/mo VPS.
+Discord bot that answers spoken LoL champion-ability questions in voice chat via the OpenAI Realtime API, fed by an ETL that renders Meraki CDN data to markdown. One process, ~$5/mo VPS, sub-second turn latency.
 
-## Two components, one process
-- **ETL** — APScheduler polls Riot `versions.json` ~30 min, on new patch fetches Meraki CDN, writes `data/champions/<name>.md`. Last patch in `state.txt`.
-- **Bot** — discord.py + `discord-ext-voice-recv` receives PTT frames → OpenAI Realtime (`gpt-realtime`) WebSocket. Model calls `get_champion_abilities(name)` which reads the markdown file.
+## Code standards
 
-## Stack
-Python 3.12, uv, discord.py, OpenAI Realtime, APScheduler.
+**Top-down ordering.** Public, high-level functions first; the private helpers they call below them. Callers before callees, so a reader meets the API before the details. Same for classes: public methods, then private. Private names take a leading underscore.
 
-## Current state (mostly TODO)
-Only `data_pipeline/transform/src/meraki_to_llm.py` exists — pure Meraki-JSON → markdown renderer (stdout). HTTP fetch, scheduler, state file, Discord, Realtime, alias map, cost cap are all unbuilt.
+**Descriptive names.** Spell things out — `champion_name`, not `cn`; `format_values`, not `fmt_vals`. Applies to functions as well as variables. Existing abbreviations get renamed when their file is touched for other reasons, not before.
 
-## Locked-in choices — do not silently revert
-Meraki (not Data Dragon) · filesystem (not DB) · Realtime (not chained STT/TTS) · function calling (not RAG) · in-process APScheduler (not GH Actions / cron) · PTT (not VAD).
+**Type hints always.** Every parameter and return type, on public and private alike. Modern syntax — `list[str]`, `dict | None`.
 
-## Hard rules
-- `core/` must not import from `adapters/` or `infrastructure/`.
-- Check per-user daily budget **before** opening the Realtime socket. Audio ≈ $0.30/min combined; an open mic burns $50+/day.
-- Voice answers 1–3 sentences. Model must call the tool for any ability data — never answer from training knowledge.
+**Comments must earn their place.** A one-line docstring on every public function saying what it does — no `Args:`/`Returns:` blocks, the signature already carries that. Inline comments only where the code is genuinely non-obvious: a workaround, a non-local constraint, a reason. Never narrate what the next line plainly says.
+
+**Import boundaries.** `core/` must not import from `adapters/` or `infrastructure/`. Nothing outside `infrastructure/` and `main.py` imports `data_pipeline/`.
+
+`ruff` enforces the mechanical half (docstrings, annotations, naming, imports): `uv run ruff check .`
 
 ## Read on demand
-- Adding files, wiring abstractions, deciding where code goes → [docs/architecture.md](docs/architecture.md)
-- Considering an alternative tech/library/pattern, or need full rationale for a locked choice → [docs/decisions.md](docs/decisions.md)
-- Commands, env vars, Docker, out-of-scope check → [docs/operations.md](docs/operations.md)
+
+- Runtime shape, directory layout, wiring abstractions, where code goes → [docs/architecture.md](docs/architecture.md)
+- Considering an alternative tech/library/pattern, or need the rationale for a locked-in choice → [docs/decisions.md](docs/decisions.md)
+- Commands, env vars, Docker, cost/budget guardrails, out-of-scope check → [docs/operations.md](docs/operations.md)

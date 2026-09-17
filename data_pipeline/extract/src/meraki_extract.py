@@ -12,12 +12,14 @@ logger = get_logger(__name__)
 
 
 def get_champion_names() -> list[str]:
+    """Return every champion key listed in the Meraki CDN index."""
     resp = httpx.get(f"{MERAKI_BASE}/champions.json", timeout=30)
     resp.raise_for_status()
     return list(resp.json().keys())
 
 
 def fetch_champion(champion_name: str) -> dict:
+    """Fetch one champion's raw JSON document from the Meraki CDN."""
     resp = httpx.get(
         f"{MERAKI_BASE}/champions/{champion_name}.json", timeout=30)
     resp.raise_for_status()
@@ -25,6 +27,7 @@ def fetch_champion(champion_name: str) -> dict:
 
 
 def extract(output_dir: Path) -> None:
+    """Download every champion's JSON into `output_dir`, skipping any not on the CDN."""
     output_dir.mkdir(parents=True, exist_ok=True)
     champion_names = get_champion_names()
     logger.info("Found %d champions", len(champion_names))

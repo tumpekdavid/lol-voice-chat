@@ -8,6 +8,7 @@ _configured = False
 
 
 def get_logger(name: str) -> logging.Logger:
+    """Return a logger for `name`, configuring root stderr logging on first call."""
     global _configured
     if not _configured:
         handler = logging.StreamHandler(sys.stderr)
@@ -20,7 +21,7 @@ def get_logger(name: str) -> logging.Logger:
 
 
 def _resolve_entry_module_name(name: str) -> str:
-    """Replace `__main__` with the entry module's dotted path when launched via `python -m`."""
+    """Replace `__main__` with the entry module's dotted path under `python -m`."""
     if name != "__main__":
         return name
     spec = getattr(sys.modules.get("__main__"), "__spec__", None)

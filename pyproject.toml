@@ -5,3 +5,41 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import sorting
+    "N",        # pep8-naming
+    "UP",       # pyupgrade — modern `list[str]` over `List[str]`
+    "ANN",      # flake8-annotations — type hints always
+    "D",        # pydocstyle — docstrings on public functions
+]
+ignore = [
+    "D100",     # module docstring not required
+    "D104",     # package docstring not required
+    "D107",     # __init__ docstring not required; document the class
+    "ANN401",   # `Any` is allowed where it is genuinely the right type
+]
+
+[tool.ruff.lint.pydocstyle]
+# Google convention, but we only want the one-line summary — the Args/Returns
+# section rules (D417 et al.) are off by default under this convention.
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Pre-standards code. meraki_to_llm.py is exempt until it gains its
+# directory-mode change (see docs/architecture.md); detect_meta.py is slated
+# for deletion.
+"data_pipeline/transform/src/meraki_to_llm.py" = ["ANN", "D"]
+"data_pipeline/transform/src/detect_meta.py" = ["ANN", "D"]
