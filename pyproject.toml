@@ -8,6 +8,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytest>=9.1.1",
     "ruff>=0.14.0",
 ]
 
@@ -36,3 +37,8 @@ ignore = [
 # Google convention, but we only want the one-line summary — the Args/Returns
 # section rules (D417 et al.) are off by default under this convention.
 convention = "google"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests", "data_pipeline"]
+addopts = "--doctest-modules"

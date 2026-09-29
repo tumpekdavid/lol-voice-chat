@@ -5,12 +5,24 @@
 ```bash
 # existing
 uv run --project data_pipeline/transform python data_pipeline/transform/src/meraki_to_llm.py data/aatrox.json
+uv run pytest
 
 # planned
 uv run python main.py                              # bot + scheduler
 uv run python -m infrastructure.scheduler --once   # ETL once manually
 docker build -t lol-voice-chat .
-uv run pytest
+```
+
+### Tests
+
+`uv run pytest` runs two kinds of test:
+
+- **Unit tests** in `tests/`.
+- **Doctests**, which are the `>>>` examples inside docstrings under `data_pipeline/`. pytest runs each `>>>` line as Python and compares the result with the line below it. When the code changes and an example no longer matches, that test fails. Enabled by `addopts = "--doctest-modules"` in `pyproject.toml`.
+
+```python
+>>> _format_values([80, 80, 80, 80, 80], ["% AP", "% AP", "% AP", "% AP", "% AP"])
+'80% AP'
 ```
 
 ## Environment variables
