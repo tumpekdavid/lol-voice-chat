@@ -36,10 +36,3 @@ ignore = [
 # Google convention, but we only want the one-line summary — the Args/Returns
 # section rules (D417 et al.) are off by default under this convention.
 convention = "google"
-
-[tool.ruff.lint.per-file-ignores]
-# Pre-standards code. meraki_to_llm.py is exempt until it gains its
-# directory-mode change (see docs/architecture.md); detect_meta.py is slated
-# for deletion.
-"data_pipeline/transform/src/meraki_to_llm.py" = ["ANN", "D"]
-"data_pipeline/transform/src/detect_meta.py" = ["ANN", "D"]

@@ -1,39 +1,154 @@
-"""
-Convert a Meraki Analytics champion JSON into a compact, LLM-readable
-markdown document.
+"""Convert a Meraki Analytics champion JSON into compact, LLM-readable markdown.
 
 Usage:
-    python meraki_to_llm.py path/to/Champion.json > Champion.md
+    python meraki_to_llm.py path/to/champion.json > champion.md
 """
 
 import json
 import sys
+from typing import Any
+
+_ABILITY_SLOTS = ("P", "Q", "W", "E", "R")
+
+_MAX_CHAMPION_LEVEL = 18
+_EMPTY_METADATA_VALUES = (None, "", "null", "none")
+_ABILITY_METADATA_FIELDS = (
+    ("Targeting", "targeting"),
+    ("Affects", "affects"),
+    ("Damage type", "damageType"),
+    ("Spell effects", "spellEffects"),
+    ("Spellshieldable", "spellshieldable"),
+    ("Projectile", "projectile"),
+    ("On-hit effects", "onHitEffects"),
+    ("Per-target cooldown", "onTargetCdStatic"),
+    ("Cast time", "castTime"),
+    ("Speed", "speed"),
+    ("Width", "width"),
+    ("Angle", "angle"),
+    ("Target range", "targetRange"),
+    ("Effect radius", "effectRadius"),
+    ("Inner radius", "innerRadius"),
+    ("Tether radius", "tetherRadius"),
+    ("Recharge", "rechargeRate"),
+)
 
 
-def fmt_num(n):
-    """Render numbers compactly (no trailing .0, no excessive decimals)."""
-    if isinstance(n, bool):
-        return str(n)
-    if isinstance(n, float):
-        if n.is_integer():
-            return str(int(n))
-        return f"{n:.4f}".rstrip("0").rstrip(".")
-    return str(n)
+def champion_to_markdown(champion: dict[str, Any]) -> str:
+    """Render one champion's Meraki JSON as a markdown document."""
+    lines = [
+        f"# {champion.get('name', '')} — {champion.get('title', '')}",
+        "",
+        f"- Resource: {champion.get('resource', '')}",
+        f"- Attack type: {champion.get('attackType', '')}",
+        f"- Adaptive damage: {champion.get('adaptiveType', '')}",
+    ]
+    if champion.get("roles"):
+        lines.append(f"- Roles: {', '.join(champion['roles'])}")
+    if champion.get("positions"):
+        lines.append(f"- Positions: {', '.join(champion['positions'])}")
+    lines.append(f"- Patch last changed: {champion.get('patchLastChanged', '')}")
+    lines.append("")
+
+    lines.append("# Abilities")
+    lines.append("")
+
+    abilities_by_slot = champion.get("abilities", {})
+    for slot in _ABILITY_SLOTS:
+        for ability in abilities_by_slot.get(slot, []):
+            lines.append(_format_ability(slot, ability))
+            lines.append("")
+
+    return "\n".join(lines)
 
 
-def fmt_values(values, units):
-    """
-    Format a list of values + their units into a string.
-    - 18 entries  -> per-level range, e.g. "22-10s (per level)"
-    - all identical -> single value, e.g. "80% AD"
-    - otherwise   -> per-rank, e.g. "10/25/40/55/70"
-    """
+def _format_ability(slot: str, ability: dict[str, Any]) -> str:
+    lines = [f"## {slot} — {ability.get('name', '')}"]
+
+    for label, key in _ABILITY_METADATA_FIELDS:
+        value = ability.get(key)
+        if value not in _EMPTY_METADATA_VALUES:
+            lines.append(f"- {label}: {value}")
+
+    cooldown = _format_cooldown(ability.get("cooldown"))
+    if cooldown:
+        lines.append(f"- Cooldown: {cooldown}")
+
+    cost = _format_cost(ability.get("cost"))
+    if cost:
+        lines.append(f"- Cost: {cost}")
+
+    lines.append("")
+
+    for effect_number, effect in enumerate(ability.get("effects", []), 1):
+        description = (effect.get("description") or "").strip()
+        if description:
+            lines.append(f"**Effect {effect_number}.** {description}")
+        for leveling in effect.get("leveling", []):
+            attribute = leveling.get("attribute", "")
+            value = _format_modifiers(leveling.get("modifiers", []))
+            if value:
+                lines.append(f"  - {attribute}: {value}")
+        lines.append("")
+
+    notes = (ability.get("notes") or "").strip()
+    if notes:
+        # The wiki notes often end in huge cast-time interaction tables; keep only
+        # the first prose block.
+        first_block = notes.split("\n\n")[0].strip()
+        if first_block:
+            lines.append(f"*Notes:* {first_block}")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+def _format_cooldown(cooldown: dict[str, Any] | None) -> str:
+    if not cooldown:
+        return ""
+    value = _format_modifiers(cooldown.get("modifiers", []))
+    if not value:
+        return ""
+    haste = (
+        "affected by ability haste"
+        if cooldown.get("affectedByCdr")
+        else "static, no ability haste"
+    )
+    if value.endswith(" per level"):
+        value = value.replace(" per level", "s per level")
+    else:
+        value = value + "s"
+    return f"{value} ({haste})"
+
+
+def _format_cost(cost: dict[str, Any] | None) -> str:
+    if not cost:
+        return ""
+    return _format_modifiers(cost.get("modifiers", []))
+
+
+def _format_modifiers(modifiers: list[dict[str, Any]]) -> str:
+    """Join modifiers as base plus scalings, e.g. "10/25/40 (+60/67.5/75% AD)"."""
+    parts = []
+    for modifier in modifiers:
+        formatted = _format_values(
+            modifier.get("values", []), modifier.get("units", [])
+        )
+        if formatted:
+            parts.append(formatted)
+    if not parts:
+        return ""
+    base, *scalings = parts
+    return " ".join([base, *(f"(+{scaling})" for scaling in scalings)])
+
+
+def _format_values(values: list[float], units: list[str]) -> str:
+    """Format as a per-level range, a single value, or per-rank "a/b/c"."""
     if not values:
         return ""
-    formatted = [fmt_num(v) for v in values]
+    formatted = [_format_number(value) for value in values]
     unit = units[0] if units else ""
 
-    if len(values) == 18:
+    if len(values) == _MAX_CHAMPION_LEVEL:
         return f"{formatted[0]}-{formatted[-1]}{unit} per level"
 
     if len(set(formatted)) == 1:
@@ -42,141 +157,20 @@ def fmt_values(values, units):
     return f"{'/'.join(formatted)}{unit}"
 
 
-def fmt_modifiers(modifiers):
-    """
-    Combine multiple modifiers into one string.
-    First modifier is the base value; subsequent ones are scalings.
-    e.g. base "10/25/40/55/70" + scaling "60/67.5/75/82.5/90% AD"
-         -> "10/25/40/55/70 (+60/67.5/75/82.5/90% AD)"
-    """
-    parts = []
-    for mod in modifiers:
-        s = fmt_values(mod.get("values", []), mod.get("units", []))
-        if s:
-            parts.append(s)
-    if not parts:
-        return ""
-    if len(parts) == 1:
-        return parts[0]
-    return parts[0] + " " + " ".join(f"(+{p})" for p in parts[1:])
-
-
-def fmt_cooldown(cd):
-    if not cd:
-        return ""
-    s = fmt_modifiers(cd.get("modifiers", []))
-    if not s:
-        return ""
-    haste = (
-        "affected by ability haste"
-        if cd.get("affectedByCdr")
-        else "static, no ability haste"
-    )
-    # If value already ends with 'per level', insert 's' before that suffix.
-    if s.endswith(" per level"):
-        s = s.replace(" per level", "s per level")
-    else:
-        s = s + "s"
-    return f"{s} ({haste})"
-
-
-def fmt_cost(cost):
-    if not cost:
-        return ""
-    return fmt_modifiers(cost.get("modifiers", []))
-
-
-def fmt_ability(slot, ability):
-    out = []
-    out.append(f"## {slot} — {ability.get('name', '')}")
-
-    # Metadata block
-    meta_keys = [
-        ("Targeting", ability.get("targeting")),
-        ("Affects", ability.get("affects")),
-        ("Damage type", ability.get("damageType")),
-        ("Spell effects", ability.get("spellEffects")),
-        ("Spellshieldable", ability.get("spellshieldable")),
-        ("Projectile", ability.get("projectile")),
-        ("On-hit effects", ability.get("onHitEffects")),
-        ("Per-target cooldown", ability.get("onTargetCdStatic")),
-        ("Cast time", ability.get("castTime")),
-        ("Speed", ability.get("speed")),
-        ("Width", ability.get("width")),
-        ("Angle", ability.get("angle")),
-        ("Target range", ability.get("targetRange")),
-        ("Effect radius", ability.get("effectRadius")),
-        ("Inner radius", ability.get("innerRadius")),
-        ("Tether radius", ability.get("tetherRadius")),
-        ("Recharge", ability.get("rechargeRate")),
-    ]
-
-    for label, val in meta_keys:
-        if val not in (None, "", "null", "none"):
-            out.append(f"- {label}: {val}")
-
-    cd = fmt_cooldown(ability.get("cooldown"))
-    if cd:
-        out.append(f"- Cooldown: {cd}")
-
-    cost = fmt_cost(ability.get("cost"))
-    if cost:
-        out.append(f"- Cost: {cost}")
-
-    out.append("")  # blank line before effects
-
-    # Effects
-    for i, effect in enumerate(ability.get("effects", []), 1):
-        desc = (effect.get("description") or "").strip()
-        if desc:
-            out.append(f"**Effect {i}.** {desc}")
-        for lvl in effect.get("leveling", []):
-            attr = lvl.get("attribute", "")
-            val = fmt_modifiers(lvl.get("modifiers", []))
-            if val:
-                out.append(f"  - {attr}: {val}")
-        out.append("")
-
-    # Notes — keep, but trim. The wiki notes can be huge tables.
-    notes = (ability.get("notes") or "").strip()
-    if notes:
-        # Drop the giant cast-time interaction tables; keep first prose block.
-        first_block = notes.split("\n\n")[0].strip()
-        if first_block:
-            out.append(f"*Notes:* {first_block}")
-            out.append("")
-
-    return "\n".join(out)
-
-
-def convert(data):
-    out = []
-    out.append(f"# {data.get('name', '')} — {data.get('title', '')}")
-    out.append("")
-    out.append(f"- Resource: {data.get('resource', '')}")
-    out.append(f"- Attack type: {data.get('attackType', '')}")
-    out.append(f"- Adaptive damage: {data.get('adaptiveType', '')}")
-    if data.get("roles"):
-        out.append(f"- Roles: {', '.join(data['roles'])}")
-    if data.get("positions"):
-        out.append(f"- Positions: {', '.join(data['positions'])}")
-    out.append(f"- Patch last changed: {data.get('patchLastChanged', '')}")
-    out.append("")
-
-    out.append("# Abilities")
-    out.append("")
-
-    for slot in ("P", "Q", "W", "E", "R"):
-        for ability in data.get("abilities", {}).get(slot, []):
-            out.append(fmt_ability(slot, ability))
-            out.append("")
-
-    return "\n".join(out)
+def _format_number(number: float) -> str:
+    """Render without a trailing .0 and with at most four decimals."""
+    if isinstance(number, float):
+        if number.is_integer():
+            return str(int(number))
+        return f"{number:.4f}".rstrip("0").rstrip(".")
+    return str(number)
 
 
 if __name__ == "__main__":
-    sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", closefd=False)
+    # Champion text contains non-ASCII (em dashes, accents) that a non-UTF-8
+    # console encoding would fail on.
+    sys.stdout.reconfigure(encoding="utf-8")
     path = sys.argv[1] if len(sys.argv) > 1 else "/dev/stdin"
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    print(convert(data))
+    with open(path, encoding="utf-8") as champion_file:
+        champion = json.load(champion_file)
+    print(champion_to_markdown(champion))

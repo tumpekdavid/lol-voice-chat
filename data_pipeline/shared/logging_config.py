@@ -3,7 +3,7 @@ import os
 import sys
 
 _FORMAT = "%(asctime)s %(levelname)-5s [%(name)s] %(message)s"
-_DATEFMT = "%Y-%m-%d %H:%M:%S"
+_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 _configured = False
 
 
@@ -12,7 +12,7 @@ def get_logger(name: str) -> logging.Logger:
     global _configured
     if not _configured:
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(logging.Formatter(_FORMAT, datefmt=_DATEFMT))
+        handler.setFormatter(logging.Formatter(_FORMAT, datefmt=_DATE_FORMAT))
         root = logging.getLogger()
         root.addHandler(handler)
         root.setLevel(os.environ.get("LOG_LEVEL", "INFO").upper())

@@ -39,7 +39,6 @@ main.py                 # composition root
 
 ## Where existing code goes
 - `data_pipeline/transform/src/meraki_to_llm.py` → stays put; gains a directory mode that writes `data/champions/<name>.md`.
-- `data_pipeline/transform/src/detect_meta.py` → delete (one-off exploration, also references wrong-case `data/Aatrox.json`).
 - `data/aatrox.json`, `data/alistar.json` → keep as test fixtures.
 
 ## Abstraction boundaries
