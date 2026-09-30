@@ -26,8 +26,8 @@ infrastructure/
   meraki_source.py      # MerakiDataSource — thin ChampionDataSource adapter over data_pipeline/
   scheduler.py          # APScheduler wiring (polls versions.json, invokes the ETL)
 data_pipeline/          # ETL, sibling tree — owns fetch + render, imports nothing from core/
-  extract/src/          # meraki_extract.py — CDN → data/raw/<name>.json
-  transform/src/        # meraki_to_llm.py — data/raw → data/champions/<name>.md
+  extract/              # meraki_extract.py — CDN → data/raw/<name>.json
+  transform/            # meraki_to_llm.py — data/raw → data/champions/<name>.md
   shared/               # logging_config.py
 data/raw/               # one <name>.json per champion (extract output)
 data/champions/         # one <name>.md per champion (transform output)
@@ -38,7 +38,7 @@ main.py                 # composition root
 `data_pipeline/` is a sibling of the ports-and-adapters tree, not a layer inside it. The bot reaches ETL output through `ChampionRepository` (the markdown files), never by importing `data_pipeline` — only `infrastructure/` and `main.py` may do that.
 
 ## Where existing code goes
-- `data_pipeline/transform/src/meraki_to_llm.py` → stays put; gains a directory mode that writes `data/champions/<name>.md`.
+- `data_pipeline/transform/meraki_to_llm.py` → stays put; gains a directory mode that writes `data/champions/<name>.md`.
 - `data/aatrox.json`, `data/alistar.json` → keep as test fixtures.
 
 ## Abstraction boundaries

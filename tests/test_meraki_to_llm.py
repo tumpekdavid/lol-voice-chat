@@ -1,6 +1,6 @@
 from typing import Any
 
-from data_pipeline.transform.src.meraki_to_llm import champion_to_markdown
+from data_pipeline.transform.meraki_to_llm import champion_to_markdown
 
 
 def test_none_metadata_value_is_omitted() -> None:
