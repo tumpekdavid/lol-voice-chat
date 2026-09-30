@@ -10,6 +10,8 @@ If you're tempted to suggest one of the alternatives below, read first.
 
 - **Filesystem, one `.md` per champion. No database.** ~170 records, ~1.5 MB total, single writer (ETL), single reader, always keyed by exact name, wholesale-replaced per patch. Filesystem is faster, zero infra, git-diffable per patch. If we ever need to query *inside* the data → SQLite, not Mongo.
 
+- **File names are Riot champion IDs, not display names.** `monkeyking.md` is Wukong, `nunu.md` is Nunu & Willump. IDs survive renames and match Riot/Meraki sources. The transform also writes `index.json` (display name → ID) from Meraki's `name` field — no hand-kept mapping. The repository serves only the names in that index; `query_handler` maps what the model typed onto one of them and never sees IDs or markdown.
+
 - **Function calling, not RAG.** Tool returns the full markdown for one champion (~1–5k tokens, median ~2k). No vector DB. Unresolved or ambiguous names return candidates — never silently pick.
 
 ## Phase 1
