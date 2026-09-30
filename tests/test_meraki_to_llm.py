@@ -1,6 +1,35 @@
+import shutil
+from pathlib import Path
 from typing import Any
 
-from data_pipeline.transform.meraki_to_llm import champion_to_markdown
+from data_pipeline.transform.meraki_to_llm import (
+    champion_to_markdown,
+    transform_directory,
+)
+
+_FIXTURES_DIR = Path(__file__).parent.parent / "data"
+
+
+def test_transform_directory_writes_one_markdown_file_per_champion(
+    tmp_path: Path,
+) -> None:
+    """Directory mode turns each `<name>.json` into `<name>.md`, creating the output."""
+    input_dir = tmp_path / "raw"
+    input_dir.mkdir()
+    for champion_name in ("aatrox", "alistar"):
+        shutil.copy(_FIXTURES_DIR / f"{champion_name}.json", input_dir)
+    output_dir = tmp_path / "champions"
+
+    transform_directory(input_dir, output_dir)
+
+    assert sorted(path.name for path in output_dir.iterdir()) == [
+        "aatrox.md",
+        "alistar.md",
+    ]
+    aatrox_markdown = (output_dir / "aatrox.md").read_text(encoding="utf-8")
+    alistar_markdown = (output_dir / "alistar.md").read_text(encoding="utf-8")
+    assert aatrox_markdown.startswith("# Aatrox — the Darkin Blade")
+    assert alistar_markdown.startswith("# Alistar — the Minotaur")
 
 
 def test_none_metadata_value_is_omitted() -> None:

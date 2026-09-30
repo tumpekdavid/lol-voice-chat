@@ -1,13 +1,20 @@
-"""Convert a Meraki Analytics champion JSON into compact, LLM-readable markdown.
+"""Convert Meraki Analytics champion JSON into compact, LLM-readable markdown.
 
 Usage:
-    python meraki_to_llm.py path/to/champion.json > champion.md
+    python -m data_pipeline.transform.meraki_to_llm path/to/champion.json > champion.md
+    python -m data_pipeline.transform.meraki_to_llm data/raw --output-dir data/champions
 """
 
+import argparse
 import json
 import re
 import sys
+from pathlib import Path
 from typing import Any
+
+from data_pipeline.shared.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 _ABILITY_SLOTS = ("P", "Q", "W", "E", "R")
 
@@ -36,6 +43,18 @@ _ABILITY_METADATA_FIELDS = (
     ("Inner radius", "innerRadius"),
     ("Tether radius", "tetherRadius"),
 )
+
+
+def transform_directory(input_dir: Path, output_dir: Path) -> None:
+    """Render every `<name>.json` in `input_dir` to `<name>.md` in `output_dir`."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    champion_paths = sorted(input_dir.glob("*.json"))
+    logger.info("Found %d champions in %s", len(champion_paths), input_dir)
+    for champion_path in champion_paths:
+        markdown = champion_to_markdown(_load_champion(champion_path))
+        destination = output_dir / f"{champion_path.stem}.md"
+        destination.write_text(markdown, encoding="utf-8")
+        logger.info("Transformed %s", champion_path.stem)
 
 
 def champion_to_markdown(champion: dict[str, Any]) -> str:
@@ -86,6 +105,11 @@ def champion_to_markdown(champion: dict[str, Any]) -> str:
             lines.append("")
 
     return "\n".join(lines)
+
+
+def _load_champion(champion_path: Path) -> dict[str, Any]:
+    """Read one champion's Meraki JSON from `champion_path`."""
+    return json.loads(champion_path.read_text(encoding="utf-8"))
 
 
 def _format_ability(slot: str, ability: dict[str, Any]) -> str:
@@ -326,10 +350,20 @@ def _format_number(number: float) -> str:
 
 
 if __name__ == "__main__":
-    # Champion text contains non-ASCII (em dashes, accents) that a non-UTF-8
-    # console encoding would fail on.
-    sys.stdout.reconfigure(encoding="utf-8")
-    path = sys.argv[1] if len(sys.argv) > 1 else "/dev/stdin"
-    with open(path, encoding="utf-8") as champion_file:
-        champion = json.load(champion_file)
-    print(champion_to_markdown(champion))
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "input_path",
+        nargs="?",
+        default="/dev/stdin",
+        type=Path,
+        help="a champion JSON file (markdown goes to stdout) or a directory of them",
+    )
+    parser.add_argument("--output-dir", default="data/champions", type=Path)
+    arguments = parser.parse_args()
+    if arguments.input_path.is_dir():
+        transform_directory(arguments.input_path, arguments.output_dir)
+    else:
+        # Champion text contains non-ASCII (em dashes, accents) that a non-UTF-8
+        # console encoding would fail on.
+        sys.stdout.reconfigure(encoding="utf-8")
+        print(champion_to_markdown(_load_champion(arguments.input_path)))

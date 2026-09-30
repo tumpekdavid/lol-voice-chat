@@ -5,7 +5,8 @@
 ```bash
 # existing
 uv run python -m data_pipeline.extract.meraki_extract          # CDN → data/raw/
-uv run python data_pipeline/transform/meraki_to_llm.py data/aatrox.json   # one champion → stdout
+uv run python -m data_pipeline.transform.meraki_to_llm data/raw           # data/raw/*.json → data/champions/<name>.md
+uv run python -m data_pipeline.transform.meraki_to_llm data/aatrox.json   # one champion → stdout
 uv run pytest
 
 # planned

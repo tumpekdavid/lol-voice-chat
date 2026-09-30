@@ -38,7 +38,7 @@ main.py                 # composition root
 `data_pipeline/` is a sibling of the ports-and-adapters tree, not a layer inside it. The bot reaches ETL output through `ChampionRepository` (the markdown files), never by importing `data_pipeline` — only `infrastructure/` and `main.py` may do that.
 
 ## Where existing code goes
-- `data_pipeline/transform/meraki_to_llm.py` → stays put; gains a directory mode that writes `data/champions/<name>.md`.
+- `data_pipeline/transform/meraki_to_llm.py` → stays put; directory mode reads `data/raw/*.json` and writes `data/champions/<name>.md`, alongside the single-file → stdout mode.
 - `data/aatrox.json`, `data/alistar.json` → keep as test fixtures.
 
 ## Abstraction boundaries
@@ -53,6 +53,3 @@ Interfaces in `core/` speak in domain terms (champion, patch, ability), are wire
 | `ClientAdapter`        | `DiscordBotAdapter`            | Desktop / web                |
 
 **Do not abstract:** logging, file I/O primitives, APScheduler internals, Discord protocol details (keep inside `DiscordBotAdapter`), the pure markdown render function.
-
-## Open contradictions to resolve
-1. **Transform output target.** `meraki_to_llm.py` takes one file and writes to stdout; extract now produces ~170 files in `data/raw/`, so transform needs a directory mode writing `data/champions/<name>.md`. Next change in the pipeline.
