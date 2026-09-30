@@ -1,6 +1,6 @@
 # lol-voice-chat
 
-Discord bot that joins a voice channel, listens for PTT audio, and answers spoken LoL champion-ability questions via the OpenAI Realtime API. See [.claude/CLAUDE.md](.claude/CLAUDE.md) and [docs/](docs/) for architecture and decisions.
+LoL champion-ability lookup for LLMs: an MCP server that gives Claude Code / Claude Desktop patch-current ability data. A Discord voice bot (OpenAI Realtime API) on the same core is planned as phase 2. See [.claude/CLAUDE.md](.claude/CLAUDE.md) and [docs/](docs/) for architecture and decisions.
 
 ## Getting started on a new machine
 
@@ -50,7 +50,7 @@ Verify the key is loaded: `ssh-add -l`. See the [VS Code guide](https://code.vis
 
 ### 4. Environment variables
 
-Create `.env` in the repo root (gitignored). Required vars are listed in [docs/operations.md](docs/operations.md#environment-variables) — minimum: `DISCORD_BOT_TOKEN`, `OPENAI_API_KEY`.
+Create `.env` in the repo root (gitignored). Vars are listed in [docs/operations.md](docs/operations.md#environment-variables). Phase 1 needs none; phase 2 needs at least `DISCORD_BOT_TOKEN` and `OPENAI_API_KEY`.
 
 ### 5. Open in the devcontainer
 

@@ -1,6 +1,6 @@
 # lol-voice-chat
 
-Discord bot that answers spoken LoL champion-ability questions in voice chat via the OpenAI Realtime API, fed by an ETL that renders Meraki CDN data to markdown. One process, ~$5/mo VPS, sub-second turn latency.
+LoL champion-ability lookup for LLMs: an ETL renders Meraki CDN data to one markdown file per champion, served to Claude Code / Claude Desktop by an MCP server.
 
 ## Code standards
 

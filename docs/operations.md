@@ -9,11 +9,18 @@ uv run python -m data_pipeline.transform.meraki_to_llm data/raw           # data
 uv run python -m data_pipeline.transform.meraki_to_llm data/aatrox.json   # one champion → stdout
 uv run pytest
 
-# planned
-uv run python main.py                              # bot + scheduler
+# planned — phase 1
+uv run python main.py                              # MCP server over stdio (normally launched by the client)
+
+# planned — phase 2
 uv run python -m infrastructure.scheduler --once   # ETL once manually
 docker build -t lol-voice-chat .
 ```
+
+### Connecting an MCP client (planned)
+
+- **Claude Code** in the devcontainer: register `uv run python main.py` as a stdio server (`claude mcp add`). Test here first.
+- **Claude Desktop** runs on the Windows host and launches stdio servers itself, so it needs a command that reaches into the devcontainer (e.g. via `docker exec -i`). Unsolved — work it out once the server works in Claude Code.
 
 ### Tests
 
@@ -29,16 +36,25 @@ docker build -t lol-voice-chat .
 
 ## Environment variables
 
+- `DATA_DIR` (default `data/`)
+- `LOG_LEVEL` (default `INFO`)
+
+Phase 2:
+
 - `DISCORD_BOT_TOKEN`
 - `DISCORD_GUILD_ID` (optional, dev)
 - `OPENAI_API_KEY`
 - `DAILY_USER_BUDGET_USD` (default ~$2)
-- `DATA_DIR` (default `data/`)
 
 ## Guardrails
 
+- **Names.** Unresolved or ambiguous names return candidates, never silently pick. Phase 1 normalizes; phase 2 adds fuzzy match + alias dict.
+- **Tool descriptions.** The client's model decides when to call a tool from its description alone — say the data is patch-current and to prefer it over its own memory for numbers.
+- **stdout is the protocol.** Under stdio transport, stdout carries MCP messages; logs go to stderr only (the shared logger already does).
+
+Phase 2:
+
 - **Cost.** Realtime audio ≈ $0.06/min in, $0.24/min out. Check per-user daily budget *before* opening the WebSocket.
-- **Names.** Fuzzy match + alias dict; ambiguity returns candidates, never silently picks.
 - **System prompt.** 1–3 sentence answers; model must call the tool for ability data.
 
 ## Out of scope
