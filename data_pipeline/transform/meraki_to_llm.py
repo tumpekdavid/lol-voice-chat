@@ -1,5 +1,8 @@
 """Convert Meraki Analytics champion JSON into compact, LLM-readable markdown.
 
+Directory mode also writes `index.json`, mapping each champion's display name to
+its markdown file name: "Wukong" → "monkeyking.md".
+
 Usage:
     python -m data_pipeline.transform.meraki_to_llm path/to/champion.json > champion.md
     python -m data_pipeline.transform.meraki_to_llm data/raw --output-dir data/champions
@@ -17,6 +20,8 @@ from data_pipeline.shared.logging_config import get_logger
 logger = get_logger(__name__)
 
 _ABILITY_SLOTS = ("P", "Q", "W", "E", "R")
+# Read by infrastructure/filesystem_repo.py; the file layout is the contract.
+_INDEX_FILE_NAME = "index.json"
 
 _MAX_CHAMPION_LEVEL = 18
 _EMPTY_METADATA_VALUES = (None, "", "null", "none", "None")
@@ -46,15 +51,18 @@ _ABILITY_METADATA_FIELDS = (
 
 
 def transform_directory(input_dir: Path, output_dir: Path) -> None:
-    """Render every `<name>.json` in `input_dir` to `<name>.md` in `output_dir`."""
+    """Render each `.json` in `input_dir` to a same-named `.md`, plus `index.json`."""
     output_dir.mkdir(parents=True, exist_ok=True)
     champion_paths = sorted(input_dir.glob("*.json"))
     logger.info("Found %d champions in %s", len(champion_paths), input_dir)
+    markdown_file_names_by_display_name: dict[str, str] = {}
     for champion_path in champion_paths:
-        markdown = champion_to_markdown(_load_champion(champion_path))
-        destination = output_dir / f"{champion_path.stem}.md"
-        destination.write_text(markdown, encoding="utf-8")
+        champion = _load_champion(champion_path)
+        markdown_path = output_dir / f"{champion_path.stem}.md"
+        markdown_path.write_text(champion_to_markdown(champion), encoding="utf-8")
+        markdown_file_names_by_display_name[champion["name"]] = markdown_path.name
         logger.info("Transformed %s", champion_path.stem)
+    _write_index(markdown_file_names_by_display_name, output_dir / _INDEX_FILE_NAME)
 
 
 def champion_to_markdown(champion: dict[str, Any]) -> str:
@@ -110,6 +118,17 @@ def champion_to_markdown(champion: dict[str, Any]) -> str:
 def _load_champion(champion_path: Path) -> dict[str, Any]:
     """Read one champion's Meraki JSON from `champion_path`."""
     return json.loads(champion_path.read_text(encoding="utf-8"))
+
+
+def _write_index(
+    markdown_file_names_by_display_name: dict[str, str], index_path: Path
+) -> None:
+    """Write the display name → markdown file name map, sorted by display name."""
+    index = dict(sorted(markdown_file_names_by_display_name.items()))
+    index_path.write_text(
+        json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    logger.info("Wrote index of %d champions to %s", len(index), index_path)
 
 
 def _format_ability(slot: str, ability: dict[str, Any]) -> str:

@@ -9,10 +9,9 @@
 
 **Phase 1** — two pieces, run separately:
 
-- **ETL** — run by hand when a patch drops: extract fetches the Meraki CDN into `data/raw/`, transform renders `data/champions/<name>.md`. Commands in [operations.md](operations.md).
-- **MCP server** — `main.py`, stdio transport. The client launches it as a subprocess on demand; nothing is hosted. Tools:
-  - `get_champion_abilities(champion_name)` — full markdown for one champion, or candidates if the name doesn't resolve.
-  - `list_champions()` — every available champion name.
+- **ETL** — run by hand when a patch drops: extract fetches the Meraki CDN into `data/raw/`, transform renders `data/champions/<key>.md` plus `index.json`. Commands in [operations.md](operations.md).
+- **MCP server** — `main.py`, stdio transport. The client launches it as a subprocess on demand; nothing is hosted. One tool:
+  - `get_champion_abilities(champion_name)` — full markdown for one champion. `champion_name` is an enum of every display name, built at startup from `index.json`; a name outside it returns an error, never a guess.
 
 **Phase 2** — one long-running process:
 
@@ -26,7 +25,7 @@ Stack: Python 3.12, uv, official MCP Python SDK (`mcp`). Phase 2 adds discord.py
 ```
 core/                   # domain logic + interfaces (no I/O imports)
   repository.py         # ChampionRepository protocol
-  query_handler.py      # get_champion_abilities / list_champions + name resolution
+  query_handler.py      # list_champions (the tool's enum) / get_champion_abilities (exact names only)
   champion.py           # phase 2 if needed
   data_source.py        # phase 2: ChampionDataSource protocol
   voice_session.py      # phase 2: VoiceSession protocol
@@ -41,11 +40,11 @@ infrastructure/
   meraki_source.py      # phase 2: MerakiDataSource — ChampionDataSource over data_pipeline/
   scheduler.py          # phase 2: APScheduler wiring (polls versions.json, invokes the ETL)
 data_pipeline/          # ETL, sibling tree — owns fetch + render, imports nothing from core/
-  extract/              # meraki_extract.py — CDN → data/raw/<name>.json
-  transform/            # meraki_to_llm.py — data/raw → data/champions/<name>.md
+  extract/              # meraki_extract.py — CDN → data/raw/<key>.json
+  transform/            # meraki_to_llm.py — data/raw → data/champions/<key>.md
   shared/               # logging_config.py
-data/raw/               # one <name>.json per champion (extract output)
-data/champions/         # one <name>.md per champion (transform output)
+data/raw/               # one <key>.json per champion, key lowercased (extract output)
+data/champions/         # one <key>.md per champion + index.json, display name → file name (transform output)
 data/state.txt          # phase 2: last processed patch
 main.py                 # composition root — phase 1: builds the repo + handler, runs the MCP server
 ```

@@ -5,7 +5,7 @@
 ```bash
 # existing
 uv run python -m data_pipeline.extract.meraki_extract          # CDN → data/raw/
-uv run python -m data_pipeline.transform.meraki_to_llm data/raw           # data/raw/*.json → data/champions/<name>.md
+uv run python -m data_pipeline.transform.meraki_to_llm data/raw           # data/raw/*.json → data/champions/<key>.md + index.json
 uv run python -m data_pipeline.transform.meraki_to_llm data/aatrox.json   # one champion → stdout
 uv run pytest
 
@@ -48,7 +48,7 @@ Phase 2:
 
 ## Guardrails
 
-- **Names.** Unresolved or ambiguous names return candidates, never silently pick. Phase 1 normalizes; phase 2 adds fuzzy match + alias dict.
+- **Names.** `champion_name` is an enum of display names; the server accepts exact matches only and returns an error otherwise, never a guess. Both phases.
 - **Tool descriptions.** The client's model decides when to call a tool from its description alone — say the data is patch-current and to prefer it over its own memory for numbers.
 - **stdout is the protocol.** Under stdio transport, stdout carries MCP messages; logs go to stderr only (the shared logger already does).
 

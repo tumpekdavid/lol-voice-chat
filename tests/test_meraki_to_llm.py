@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 from typing import Any
@@ -13,11 +14,11 @@ _FIXTURES_DIR = Path(__file__).parent.parent / "data"
 def test_transform_directory_writes_one_markdown_file_per_champion(
     tmp_path: Path,
 ) -> None:
-    """Directory mode turns each `<name>.json` into `<name>.md`, creating the output."""
+    """Each `.json` becomes a same-named `.md`; the output directory is created."""
     input_dir = tmp_path / "raw"
     input_dir.mkdir()
-    for champion_name in ("aatrox", "alistar"):
-        shutil.copy(_FIXTURES_DIR / f"{champion_name}.json", input_dir)
+    for raw_file_name in ("aatrox.json", "alistar.json"):
+        shutil.copy(_FIXTURES_DIR / raw_file_name, input_dir)
     output_dir = tmp_path / "champions"
 
     transform_directory(input_dir, output_dir)
@@ -25,11 +26,39 @@ def test_transform_directory_writes_one_markdown_file_per_champion(
     assert sorted(path.name for path in output_dir.iterdir()) == [
         "aatrox.md",
         "alistar.md",
+        "index.json",
     ]
     aatrox_markdown = (output_dir / "aatrox.md").read_text(encoding="utf-8")
     alistar_markdown = (output_dir / "alistar.md").read_text(encoding="utf-8")
     assert aatrox_markdown.startswith("# Aatrox — the Darkin Blade")
     assert alistar_markdown.startswith("# Alistar — the Minotaur")
+    assert _read_index(output_dir) == {
+        "Aatrox": "aatrox.md",
+        "Alistar": "alistar.md",
+    }
+
+
+def test_index_maps_display_name_to_markdown_file_name(tmp_path: Path) -> None:
+    """The index keys on Meraki's display name and points at the markdown file."""
+    input_dir = tmp_path / "raw"
+    input_dir.mkdir()
+    for raw_file_name, display_name in (
+        ("monkeyking.json", "Wukong"),
+        ("nunu.json", "Nunu & Willump"),
+        ("khazix.json", "Kha'Zix"),
+    ):
+        champion = {"name": display_name, "title": "", "abilities": {}}
+        (input_dir / raw_file_name).write_text(json.dumps(champion))
+    output_dir = tmp_path / "champions"
+
+    transform_directory(input_dir, output_dir)
+
+    assert _read_index(output_dir) == {
+        "Kha'Zix": "khazix.md",
+        "Nunu & Willump": "nunu.md",
+        "Wukong": "monkeyking.md",
+    }
+    assert list(_read_index(output_dir)) == ["Kha'Zix", "Nunu & Willump", "Wukong"]
 
 
 def test_none_metadata_value_is_omitted() -> None:
@@ -119,6 +148,10 @@ def test_leveling_row_with_formula_in_units_is_skipped() -> None:
 
     assert "Minimum Physical Damage per Bullet" not in markdown
     assert "  - Physical Damage: 10/20/30/40/50" in markdown
+
+
+def _read_index(output_dir: Path) -> dict[str, str]:
+    return json.loads((output_dir / "index.json").read_text(encoding="utf-8"))
 
 
 def _render_ability(**ability_fields: Any) -> str:
