@@ -23,8 +23,6 @@ docker build -t lol-voice-chat .
   claude mcp add lol-champions -- uv run --directory /workspaces/lol-voice-chat python main.py
   ```
 
-- **Claude Desktop** runs on the Windows host and launches stdio servers itself, so it needs a command that reaches into the devcontainer (e.g. via `docker exec -i`). Unsolved — work it out once the server works in Claude Code.
-
 ### Tests
 
 `uv run pytest` runs two kinds of test:
