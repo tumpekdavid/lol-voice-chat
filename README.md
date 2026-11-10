@@ -92,3 +92,4 @@ See [docs/operations.md](docs/operations.md) for the full command list.
 - `libopus0` — required at runtime by `discord-ext-voice-recv` (Opus audio codec). Without it, the bot will fail to decode received voice frames.
 - [Claude Code](https://code.claude.com/docs/en/vs-code) VS Code extension. The extension bundles its own `claude` CLI binary, so no separate Node / npm install is needed. Sign in via the extension panel on first use.
 - Runs `uv sync` on container create **if** `pyproject.toml` already exists.
+- `.venv` lives in a Docker volume rather than the bind-mounted workspace, because Python imports through a Windows/macOS bind mount are slow (MCP server startup ~9s → ~2s). The volume survives rebuilds; to start from a clean venv, delete the `lol-voice-chat-venv-*` volume in Docker Desktop and rebuild.

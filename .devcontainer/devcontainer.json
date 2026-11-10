@@ -2,11 +2,25 @@
   "name": "lol-voice-chat",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   // libopus0 is required at runtime by discord-ext-voice-recv (Opus codec).
-  // uv is installed via `pip install --user` — there is no official `ghcr.io/astral-sh/uv` devcontainer feature
+  // uv is installed via `pip install --user uv` — there is no official `ghcr.io/astral-sh/uv` devcontainer feature
   //   (that registry path is uv's Docker image, not a feature manifest).
   // uv sync runs only if pyproject.toml exists; first-time bootstrap is `uv init` + `uv add` (see README.md).
   // The `anthropic.claude-code` extension bundles its own `claude` CLI binary, so no Node / npm install is needed.
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends libopus0 && pip install --user uv && (test -f pyproject.toml && uv sync || true)",
+  // .venv is a Docker volume, not part of the bind-mounted workspace: on a Windows or macOS host every file access
+  //   through the bind mount is slow, and importing `mcp` reads ~600 modules (MCP server startup ~9s → ~2s).
+  //   A new volume is root-owned, hence the chown. ${devcontainerId} keeps two clones on one machine apart.
+  //   UV_LINK_MODE=copy: the uv cache and the volume are separate filesystems, so uv can't hardlink anyway.
+  // ~/.claude is a Docker volume so Claude Code history, login and settings survive a container rebuild.
+  //   CLAUDE_CONFIG_DIR moves ~/.claude.json (otherwise loose in $HOME) into that same volume.
+  "mounts": [
+    "source=lol-voice-chat-venv-${devcontainerId},target=${containerWorkspaceFolder}/.venv,type=volume",
+    "source=lol-voice-chat-claude-${devcontainerId},target=/home/vscode/.claude,type=volume"
+  ],
+  "containerEnv": {
+    "UV_LINK_MODE": "copy",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+  },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends libopus0 && sudo chown vscode:vscode .venv /home/vscode/.claude && pip install --user uv && (test -f pyproject.toml && uv sync || true)",
   "customizations": {
     "vscode": {
       "extensions": ["ms-python.python", "ms-python.vscode-pylance", "charliermarsh.ruff", "anthropic.claude-code"]
